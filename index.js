@@ -26,7 +26,6 @@ function cleanData(data) {
 
 function execLogs() {
     const spawn = require('child_process').spawn;
-    console.log(process.env.HOME);
     const logs = spawn('docker-compose', ['logs', '-f', '-t'], {cwd: process.env.HOME + '/chainpoint-node'});
 
     logs.stdout.on('data', (data) => {
