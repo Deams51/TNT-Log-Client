@@ -62,14 +62,17 @@ function update() {
     const spawn = require('child_process').spawn;
     const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
     git.stdout.on('data', (data) => {
+        console.log('Update: ${data}');
         socket.emit('update-log', {level: 'info', data: cleanData(data)});
     });
 
     git.stderr.on('data', (data) => {
+        console.error('Update: ${data}');
         socket.emit('update-error', {level: 'error', data: cleanData(data)});
     });
 
     git.on('close', (code) => {
+        console.log('Exited update with code ' + code);
         socket.emit('update-finished', code);
     });
 }
