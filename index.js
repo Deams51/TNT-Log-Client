@@ -9,6 +9,10 @@ socket.on('start', function() {
     execLogs();
 });
 
+socket.on('sha', function() {
+    sendLastCommitSha();
+});
+
 function cleanData(data) {
     var res = [];
 
@@ -39,5 +43,17 @@ function execLogs() {
     logs.on('close', (code) => {
         socket.emit('log', {level: 'info', data: ['Exited with code: ' + code]});
         console.log(`child process exited with code ${code}`);
+    });
+}
+
+function sendLastCommitSha() {
+    const spawn = require('child_process').spawn;
+    const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: process.env.HOME + '/chainpoint-node'});
+    logs.stdout.on('data', (data) => {
+        socket.emit('sha', data.toString());
+    });
+
+    logs.stderr.on('data', (data) => {
+        socket.emit('sha-error', data.toString());
     });
 }
