@@ -113,7 +113,7 @@ function start() {
 function updateIfNeeded(lastSha) {
     if(!lastSha) return console.error('updateIfNeeded: No sha sent');
 
-    getLastCommitSha.then(localSha => {
+    getLastCommitSha().then(localSha => {
         if(localSha !== lastSha) {
             const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
             git.stdout.on('data', onLog);
