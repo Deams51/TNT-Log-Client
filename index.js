@@ -5,17 +5,11 @@ socket.on('connect', function(){});
 socket.on('event', function(data){});
 socket.on('disconnect', function(){});
 
-socket.on('start', function() {
-    execLogs();
-});
-
-socket.on('sha', function() {
-    sendLastCommitSha();
-});
-
-socket.on('update', function() {
-    update();
-});
+socket.on('start', start);
+socket.on('shutdown', shutdown);
+socket.on('restart', restart);
+socket.on('sha', sendLastCommitSha);
+socket.on('update', update);
 
 function cleanData(data) {
     var res = [];
@@ -31,10 +25,12 @@ function cleanData(data) {
     return res;
 }
 
+const spawn = require('child_process').spawn;
+const nodePath = process.env.HOME + '/chainpoint-node';
+
 
 function execLogs() {
-    const spawn = require('child_process').spawn;
-    const logs = spawn('docker-compose', ['logs', '-f', '-t'], {cwd: process.env.HOME + '/chainpoint-node'});
+    const logs = spawn('docker-compose', ['logs', '-f', '-t'], {cwd: nodePath});
 
     logs.stdout.on('data', (data) => {
         socket.emit('log', {level: 'info', data: cleanData(data)});
@@ -51,8 +47,7 @@ function execLogs() {
 }
 
 function sendLastCommitSha() {
-    const spawn = require('child_process').spawn;
-    const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: process.env.HOME + '/chainpoint-node'});
+    const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
     lastCommitGit.stdout.on('data', (data) => {
         socket.emit('sha', data.toString());
     });
@@ -62,9 +57,43 @@ function sendLastCommitSha() {
     });
 }
 
+function shutdown() {
+    const make = spawn('make', ['down'], {cwd: nodePath});
+    make.stdout.on('data', (data) => {
+        console.log('shutdown: ${data}');
+        socket.emit('shutdown-log', {level: 'info', data: cleanData(data)});
+    });
+
+    make.stderr.on('data', (data) => {
+        console.error('shutdown: ${data}');
+        socket.emit('shutdown-error', {level: 'error', data: cleanData(data)});
+    });
+
+    make.on('close', (code) => {
+        console.log('Exited shutdown with code ' + code);
+        socket.emit('shutdown-finished', code);
+    });
+}
+
+function start() {
+    const make = spawn('make', ['up'], {cwd: nodePath});
+    make.stdout.on('data', (data) => {
+        console.log('start: ${data}');
+        socket.emit('start-log', {level: 'info', data: cleanData(data)});
+    });
+
+    make.stderr.on('data', (data) => {
+        console.error('start: ${data}');
+        socket.emit('start-error', {level: 'error', data: cleanData(data)});
+    });
+
+    make.on('close', (code) => {
+        console.log('Exited start with code ' + code);
+        socket.emit('start-finished', code);
+    });
+}
+
 function update() {
-    console.log('Update requested...');
-    const spawn = require('child_process').spawn;
     const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
     git.stdout.on('data', (data) => {
         console.log('Update: ${data}');
