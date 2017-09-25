@@ -110,3 +110,7 @@ function update() {
         socket.emit('update-finished', code);
     });
 }
+
+function restart(){
+    
+}
