@@ -49,11 +49,11 @@ function execLogs() {
 function sendLastCommitSha() {
     const spawn = require('child_process').spawn;
     const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: process.env.HOME + '/chainpoint-node'});
-    logs.stdout.on('data', (data) => {
+    lastCommitGit.stdout.on('data', (data) => {
         socket.emit('sha', data.toString());
     });
 
-    logs.stderr.on('data', (data) => {
+    lastCommitGit.stderr.on('data', (data) => {
         socket.emit('sha-error', data.toString());
     });
 }
