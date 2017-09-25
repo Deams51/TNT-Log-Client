@@ -47,8 +47,8 @@ function getLastCommitSha() {
     return new Promise((resolve, reject) => {
         const git = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
 
-        let res = '';
-        let err = '';
+        var res = '';
+        var err = '';
 
         git.stdout.on('data', (data) => {
             res += data;
