@@ -90,6 +90,10 @@ function start() {
     make.on('close', (code) => {
         console.log('Exited start with code ' + code);
         socket.emit('start-finished', code);
+
+        if(code === 0) {
+            execLogs();
+        }
     });
 }
 
@@ -112,5 +116,5 @@ function update() {
 }
 
 function restart(){
-    
+
 }
