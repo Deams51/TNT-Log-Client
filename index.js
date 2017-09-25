@@ -13,6 +13,10 @@ socket.on('sha', function() {
     sendLastCommitSha();
 });
 
+socket.on('update', function() {
+    update();
+});
+
 function cleanData(data) {
     var res = [];
 
