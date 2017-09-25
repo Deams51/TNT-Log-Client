@@ -59,6 +59,7 @@ function sendLastCommitSha() {
 }
 
 function update() {
+    console.log('Update requested...');
     const spawn = require('child_process').spawn;
     const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
     git.stdout.on('data', (data) => {
