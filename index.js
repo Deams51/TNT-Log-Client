@@ -9,7 +9,7 @@ socket.on('start', start);
 socket.on('shutdown', shutdown);
 socket.on('restart', restart);
 socket.on('sha', sendLastCommitSha);
-socket.on('update', update);
+socket.on('updateIfNeeded', updateIfNeeded);
 
 function cleanData(data) {
     var res = [];
@@ -28,17 +28,13 @@ function cleanData(data) {
 const spawn = require('child_process').spawn;
 const nodePath = process.env.HOME + '/chainpoint-node';
 
+function onLog(data)    { socket.emit('log', {level: 'info', data: cleanData(data)}); }
+function onError(data)  { socket.emit('log', {level: 'error', data: cleanData(data)}); }
 
 function execLogs() {
     const logs = spawn('docker-compose', ['logs', '-f', '-t'], {cwd: nodePath});
-
-    logs.stdout.on('data', (data) => {
-        socket.emit('log', {level: 'info', data: cleanData(data)});
-    });
-
-    logs.stderr.on('data', (data) => {
-        socket.emit('log', {level: 'info', data: cleanData(data)});
-    });
+    logs.stdout.on('data', onLog);
+    logs.stderr.on('data', onError);
 
     logs.on('close', (code) => {
         socket.emit('log', {level: 'info', data: ['Exited with code: ' + code]});
@@ -46,28 +42,51 @@ function execLogs() {
     });
 }
 
-function sendLastCommitSha() {
-    const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
-    lastCommitGit.stdout.on('data', (data) => {
-        socket.emit('sha', data.toString());
-    });
 
-    lastCommitGit.stderr.on('data', (data) => {
-        socket.emit('sha-error', data.toString());
+function getLastCommitSha() {
+    return new Promise((resolve, reject) => {
+        const git = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
+
+        let res = '';
+        let err = '';
+
+        git.stdout.on('data', (data) => {
+            res += data;
+        });
+
+        git.stderr.on('data', (data) => {
+            err += data;
+        });
+
+        git.on('close', (code) => {
+            if(code === 0) {
+                resolve(res.toString());
+            }
+            else reject(err);
+        });
     });
+}
+
+
+function sendLastCommitSha() {
+    // const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
+    // lastCommitGit.stdout.on('data', (data) => {
+    //     socket.emit('sha', data.toString());
+    // });
+    //
+    // lastCommitGit.stderr.on('data', (data) => {
+    //     socket.emit('sha-error', data.toString());
+    // });
+
+    getLastCommitSha
+        .then(sha => socket.emit('sha', sha))
+        .catch(err => onError(err))
 }
 
 function shutdown() {
     const make = spawn('make', ['down'], {cwd: nodePath});
-    make.stdout.on('data', (data) => {
-        console.log('shutdown: ${data}');
-        socket.emit('shutdown-log', {level: 'info', data: cleanData(data)});
-    });
-
-    make.stderr.on('data', (data) => {
-        console.error('shutdown: ${data}');
-        socket.emit('shutdown-error', {level: 'error', data: cleanData(data)});
-    });
+    make.stdout.on('data', onLog);
+    make.stderr.on('data', onError);
 
     make.on('close', (code) => {
         console.log('Exited shutdown with code ' + code);
@@ -77,15 +96,8 @@ function shutdown() {
 
 function start() {
     const make = spawn('make', ['up'], {cwd: nodePath});
-    make.stdout.on('data', (data) => {
-        console.log('start: ${data}');
-        socket.emit('start-log', {level: 'info', data: cleanData(data)});
-    });
-
-    make.stderr.on('data', (data) => {
-        console.error('start: ${data}');
-        socket.emit('start-error', {level: 'error', data: cleanData(data)});
-    });
+    make.stdout.on('data', onLog);
+    make.stderr.on('data', onError);
 
     make.on('close', (code) => {
         console.log('Exited start with code ' + code);
@@ -97,21 +109,21 @@ function start() {
     });
 }
 
-function update() {
-    const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
-    git.stdout.on('data', (data) => {
-        console.log('Update: ${data}');
-        socket.emit('update-log', {level: 'info', data: cleanData(data)});
-    });
 
-    git.stderr.on('data', (data) => {
-        console.error('Update: ${data}');
-        socket.emit('update-error', {level: 'error', data: cleanData(data)});
-    });
+function updateIfNeeded(lastSha) {
+    if(!lastSha) return console.error('updateIfNeeded: No sha sent');
 
-    git.on('close', (code) => {
-        console.log('Exited update with code ' + code);
-        socket.emit('update-finished', code);
+    getLastCommitSha.then(localSha => {
+        if(localSha !== lastSha) {
+            const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
+            git.stdout.on('data', onLog);
+            git.stderr.on('data', onError);
+
+            git.on('close', (code) => {
+                console.log('Exited update with code ' + code);
+                socket.emit('update-finished', code);
+            });
+        }
     });
 }
 
