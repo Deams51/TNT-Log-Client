@@ -24,6 +24,7 @@ function onError(data)  { sendLog(data, 'error'); }
 function sendLog(data, level) {
     var cleaned = cleanData(data);
     for (var i = 0, len = cleaned.length; i < len; i++) {
+        console.log(cleaned[i]);
         socket.emit('log', {level: level, data: cleaned[i]});
     }
 }
