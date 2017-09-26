@@ -120,20 +120,24 @@ function restart(){
 
 
 /**
- * Split input string on new lines and remove unicode characters
- * @param data
+ * Convert input buffer to string, split on new lines and remove unicode characters
+ * @param buffer
  * @returns {Array} cleaned strings
  */
-function cleanData(stringArray) {
+function cleanData(buffer) {
     const res = [];
     // Split lines, using a sync loop to keep order
-    const dataArray = stringArray.toString().split(/\r?\n/);
-    console.log('stringArray: ');
-    console.log(stringArray);
+    const dataArray = buffer.toString().split(/\r?\n/);
+    console.log('buffer: ');
+    console.log(buffer);
     console.log('dataArray: ');
     console.log(dataArray);
     for (var i = 0, len = dataArray.length; i < len; i++) {
         const msg = dataArray[i];
+
+        console.log('msg: ' + i);
+        console.log(msg);
+
         // Check if string is empty
         if(msg.replace(/\s/g, '').length > 0) {
             // Remove unicode characters and push to results
