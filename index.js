@@ -1,8 +1,11 @@
-var server = require('./config').server;
-var socket = require('socket.io-client')(server);
+var config = require('./config');
+var socket = require('socket.io-client')(config.server);
 
 /** API **/
-socket.on('connect', function(){});
+socket.on('connect', function(){
+    socket.commit('register', {name: config.name});
+});
+
 socket.on('event', function(data){});
 socket.on('disconnect', function(){});
 
