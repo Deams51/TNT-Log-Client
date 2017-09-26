@@ -133,7 +133,7 @@ function cleanData(buffer) {
     console.log('dataArray: ');
     console.log(dataArray);
     for (var i = 0, len = dataArray.length; i < len; i++) {
-        const msg = dataArray[i];
+        var msg = dataArray[i];
 
         console.log('msg: ' + i);
         console.log(msg);
