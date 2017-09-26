@@ -18,8 +18,9 @@ socket.on('updateIfNeeded', updateIfNeeded);
 const spawn = require('child_process').spawn;
 const nodePath = process.env.HOME + '/chainpoint-node';
 
-function onLog(data)    { sendLog(data, 'info'); }
-function onError(data)  { sendLog(data, 'error'); }
+function onLogData(data)    { sendLog(data, 'info'); }
+function onErrorData(data)  { sendLog(data, 'error'); }
+function onErrorLine(line)  { socket.emit('log', {level: 'error', data: line}); }
 
 function sendLog(data, level) {
     var cleaned = cleanData(data);
@@ -30,8 +31,8 @@ function sendLog(data, level) {
 
 function execLogs() {
     const logs = spawn('docker-compose', ['logs', '-f', '-t'], {cwd: nodePath});
-    logs.stdout.on('data', onLog);
-    logs.stderr.on('data', onError);
+    logs.stdout.on('data', onLogData);
+    logs.stderr.on('data', onErrorData);
 
     logs.on('close', (code) => {
         const level = (code !== 0 ? 'error' : 'info');
@@ -67,13 +68,13 @@ function getLastCommitSha() {
 function sendLastCommitSha() {
     getLastCommitSha
         .then(sha => socket.emit('sha', sha))
-        .catch(err => onError(err))
+        .catch(err => onErrorData(err))
 }
 
 function shutdown() {
     const make = spawn('make', ['down'], {cwd: nodePath});
-    make.stdout.on('data', onLog);
-    make.stderr.on('data', onError);
+    make.stdout.on('data', onLogData);
+    make.stderr.on('data', onErrorData);
 
     make.on('close', (code) => {
         console.log('Exited shutdown with code ' + code);
@@ -83,8 +84,8 @@ function shutdown() {
 
 function start() {
     const make = spawn('make', ['up'], {cwd: nodePath});
-    make.stdout.on('data', onLog);
-    make.stderr.on('data', onError);
+    make.stdout.on('data', onLogData);
+    make.stderr.on('data', onErrorData);
 
     make.on('close', (code) => {
         console.log('Exited start with code ' + code);
@@ -97,13 +98,13 @@ function start() {
 }
 
 function updateIfNeeded(lastSha) {
-    if(!lastSha) return console.error('updateIfNeeded: No sha sent');
+    if(!lastSha) return onErrorLine('updateIfNeeded: No sha sent');
 
     getLastCommitSha().then(localSha => {
         if(localSha !== lastSha) {
             const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
-            git.stdout.on('data', onLog);
-            git.stderr.on('data', onError);
+            git.stdout.on('data', onLogData);
+            git.stderr.on('data', onErrorData);
 
             git.on('close', (code) => {
                 console.log('Exited update with code ' + code);
