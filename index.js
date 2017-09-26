@@ -18,8 +18,15 @@ socket.on('updateIfNeeded', updateIfNeeded);
 const spawn = require('child_process').spawn;
 const nodePath = process.env.HOME + '/chainpoint-node';
 
-function onLog(data)    { socket.emit('log', {level: 'info', data: cleanData(data)}); }
-function onError(data)  { socket.emit('log', {level: 'error', data: cleanData(data)}); }
+function onLog(data)    { sendLog(data, 'info'); }
+function onError(data)  { sendLog(data, 'error'); }
+
+function sendLog(data, level) {
+    var cleaned = cleanData(data);
+    for (var i = 0, len = cleaned.length; i < len; i++) {
+        socket.emit('log', {level: level, data: cleaned[i]});
+    }
+}
 
 function execLogs() {
     const logs = spawn('docker-compose', ['logs', '-f', '-t'], {cwd: nodePath});
@@ -27,8 +34,9 @@ function execLogs() {
     logs.stderr.on('data', onError);
 
     logs.on('close', (code) => {
-        socket.emit('log', {level: 'info', data: ['Exited with code: ' + code]});
-        console.log(`child process exited with code ${code}`);
+        const level = (code !== 0 ? 'error' : 'info');
+        socket.emit('log', {level: level, data: ['Exited with code: ' + code]});
+        console.log(`Logs process exited with code ${code}`);
     });
 }
 
