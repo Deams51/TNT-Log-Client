@@ -1,6 +1,7 @@
 var server = require('./config').server;
 var socket = require('socket.io-client')(server);
 
+/** API **/
 socket.on('connect', function(){});
 socket.on('event', function(data){});
 socket.on('disconnect', function(){});
@@ -10,20 +11,6 @@ socket.on('shutdown', shutdown);
 socket.on('restart', restart);
 socket.on('sha', sendLastCommitSha);
 socket.on('updateIfNeeded', updateIfNeeded);
-
-function cleanData(data) {
-    var res = [];
-
-    // Split lines, using a sync loop to keep order
-    var dataArray = data.toString().split(/\r?\n/);
-    for(var idx in dataArray) {
-        var msg = dataArray[idx];
-        if(msg.replace(/\s/g, '').length > 0)
-            res.push(msg);
-    }
-
-    return res;
-}
 
 const spawn = require('child_process').spawn;
 const nodePath = process.env.HOME + '/chainpoint-node';
@@ -41,7 +28,6 @@ function execLogs() {
         console.log(`child process exited with code ${code}`);
     });
 }
-
 
 function getLastCommitSha() {
     return new Promise((resolve, reject) => {
@@ -67,17 +53,7 @@ function getLastCommitSha() {
     });
 }
 
-
 function sendLastCommitSha() {
-    // const lastCommitGit = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
-    // lastCommitGit.stdout.on('data', (data) => {
-    //     socket.emit('sha', data.toString());
-    // });
-    //
-    // lastCommitGit.stderr.on('data', (data) => {
-    //     socket.emit('sha-error', data.toString());
-    // });
-
     getLastCommitSha
         .then(sha => socket.emit('sha', sha))
         .catch(err => onError(err))
@@ -109,7 +85,6 @@ function start() {
     });
 }
 
-
 function updateIfNeeded(lastSha) {
     if(!lastSha) return console.error('updateIfNeeded: No sha sent');
 
@@ -129,4 +104,25 @@ function updateIfNeeded(lastSha) {
 
 function restart(){
 
+}
+
+
+
+/**
+ * Split input string on new lines and remove unicode characters
+ * @param data
+ * @returns {Array} cleaned strings
+ */
+function cleanData(stringArray) {
+    const res = [];
+    // Split lines, using a sync loop to keep order
+    const dataArray = stringArray.toString().split(/\r?\n/);
+    for(const idx in dataArray) {
+        const msg = dataArray[idx];
+        if(msg.replace(/\s/g, '').length > 0) {
+            // Remove unicode characters and push to results
+            res.push(msg.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').replace(/\r?\n|\r/g, ''));
+        }
+    }
+    return res;
 }
