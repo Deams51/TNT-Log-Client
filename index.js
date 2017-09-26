@@ -137,7 +137,8 @@ function cleanData(stringArray) {
         // Check if string is empty
         if(msg.replace(/\s/g, '').length > 0) {
             // Remove unicode characters and push to results
-            res.push(msg.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').replace(/\r?\n|\r/g, ''));
+            var cleanedLine = msg.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').replace(/\r?\n|\r/g, '');
+            res.push(cleanedLine);
         }
     }
     console.log('res: ');
