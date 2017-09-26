@@ -117,8 +117,6 @@ function restart(){
 
 }
 
-
-
 /**
  * Convert input buffer to string, split on new lines and remove unicode characters
  * @param buffer
@@ -128,26 +126,14 @@ function cleanData(buffer) {
     const res = [];
     // Split lines, using a sync loop to keep order
     const dataArray = buffer.toString().split(/\r?\n/);
-    console.log('buffer: ');
-    console.log(buffer);
-    console.log('dataArray: ');
-    console.log(dataArray);
     for (var i = 0, len = dataArray.length; i < len; i++) {
         var msg = dataArray[i];
-
-        console.log('msg: ' + i);
-        console.log(msg);
-
         // Check if string is empty
         if(msg.replace(/\s/g, '').length > 0) {
             // Remove unicode characters and push to results
             var cleanedLine = msg.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').replace(/\r?\n|\r/g, '');
             res.push(cleanedLine);
-            console.log('cleanedLine: ');
-            console.log(cleanedLine);
         }
     }
-    console.log('res: ');
-    console.log(res);
     return res;
 }
