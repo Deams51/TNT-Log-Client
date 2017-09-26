@@ -139,6 +139,8 @@ function cleanData(stringArray) {
             // Remove unicode characters and push to results
             var cleanedLine = msg.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').replace(/\r?\n|\r/g, '');
             res.push(cleanedLine);
+            console.log('cleanedLine: ');
+            console.log(cleanedLine);
         }
     }
     console.log('res: ');
