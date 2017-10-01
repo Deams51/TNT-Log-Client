@@ -20,6 +20,7 @@ const nodePath = process.env.HOME + '/chainpoint-node';
 
 function onLogData(data)    { sendLog(data, 'info'); }
 function onErrorData(data)  { sendLog(data, 'error'); }
+function OnLogLine(line)  { socket.emit('log', {level: 'info', data: line}); }
 function onErrorLine(line)  { socket.emit('log', {level: 'error', data: line}); }
 
 function sendLog(data, level) {
@@ -102,14 +103,19 @@ function updateIfNeeded(lastSha) {
 
     getLastCommitSha().then(localSha => {
         if(localSha !== lastSha) {
+            OnLogLine('Updating node...');
             const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
             git.stdout.on('data', onLogData);
             git.stderr.on('data', onErrorData);
 
             git.on('close', (code) => {
+                OnLogLine('Finished updating node!');
                 console.log('Exited update with code ' + code);
                 socket.emit('update-finished', code);
             });
+        }
+        else {
+            OnLogLine('Already up to date!');
         }
     });
 }
@@ -138,3 +144,36 @@ function cleanData(buffer) {
     }
     return res;
 }
+
+
+let request = require('request-promise');
+const repoUrl = 'https://api.github.com/repos/chainpoint/chainpoint-node/commits/master';
+async function getLatestCommitHash() {
+  try {
+    let options = {
+      url: repoUrl,
+      headers: {
+        'User-Agent': 'TNT-logs'
+      }
+    };
+
+    let res = await request(options);
+    let commit = JSON.parse(res);
+    let lastCommitSha = commit.sha;
+    console.log('SHA: ' + lastCommitSha);
+    return lastCommitSha;
+  }
+  catch(err) {
+    console.error(err);
+  }
+}
+
+
+setInterval(function() {
+    OnLogLine('Checking for latest commit sha...');
+    getLatestCommitHash().then(latestSha => {
+        updateIfNeeded(latestSha);
+    }).catch(err => {
+        onErrorLine('Failed to get latest sha from Github: ' + err);
+    });
+}, 1000*60*10);
