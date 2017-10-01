@@ -113,6 +113,7 @@ function updateIfNeeded(lastSha) {
     getLastCommitSha().then(localSha => {
         if(localSha !== lastSha) {
             OnLogLine('Updating node...');
+            OnLogLine('Local sha: ' + localSha + '    live sha: ' + lastSha);
 
             const make = spawn('make', ['upgrade'], {cwd: nodePath});
             make.stdout.on('data', onLogData);
