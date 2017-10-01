@@ -111,7 +111,7 @@ function updateIfNeeded(lastSha) {
     if(!lastSha) return onErrorLine('updateIfNeeded: No sha sent');
 
     getLastCommitSha().then(localSha => {
-        if(localSha !== lastSha) {
+        if(localSha.trim() !== lastSha.trim()) {
             OnLogLine('Updating node...');
             OnLogLine('Local sha: ' + localSha + '    live sha: ' + lastSha);
 
