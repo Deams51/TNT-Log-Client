@@ -76,27 +76,34 @@ function sendLastCommitSha() {
 
 function shutdown() {
     const make = spawn('make', ['down'], {cwd: nodePath});
-    make.stdout.on('data', onLogData);
-    make.stderr.on('data', onErrorData);
 
-    make.on('close', (code) => {
-        console.log('Exited shutdown with code ' + code);
-        socket.emit('shutdown-finished', code);
+    return new Promise((resolve, reject) => {
+        make.stdout.on('data', onLogData);
+        make.stderr.on('data', onErrorData);
+
+        make.on('close', (code) => {
+            console.log('Exited shutdown with code ' + code);
+            socket.emit('shutdown-finished', code);
+            resolve();
+        });
     });
 }
 
 function start() {
-    const make = spawn('make', ['up'], {cwd: nodePath});
-    make.stdout.on('data', onLogData);
-    make.stderr.on('data', onErrorData);
+    return new Promise((resolve, reject) => {
+        const make = spawn('make', ['up'], {cwd: nodePath});
+        make.stdout.on('data', onLogData);
+        make.stderr.on('data', onErrorData);
 
-    make.on('close', (code) => {
-        console.log('Exited start with code ' + code);
-        socket.emit('start-finished', code);
+        make.on('close', (code) => {
+            console.log('Exited start with code ' + code);
+            socket.emit('start-finished', code);
 
-        if(code === 0) {
-            execLogs();
-        }
+            if (code === 0) {
+                execLogs();
+            }
+            resolve();
+        });
     });
 }
 
@@ -106,15 +113,23 @@ function updateIfNeeded(lastSha) {
     getLastCommitSha().then(localSha => {
         if(localSha !== lastSha) {
             OnLogLine('Updating node...');
-            const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
-            git.stdout.on('data', onLogData);
-            git.stderr.on('data', onErrorData);
 
-            git.on('close', (code) => {
-                OnLogLine('Finished updating node!');
-                console.log('Exited update with code ' + code);
-                socket.emit('update-finished', code);
+            shutdown().then( () => {
+                const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
+                git.stdout.on('data', onLogData);
+                git.stderr.on('data', onErrorData);
+
+                git.on('close', (code) => {
+                    OnLogLine('Finished updating node (code: ' + code + '), restarting...');
+                    socket.emit('update-finished', code);
+                    start().catch(err => {
+                        onErrorLine('Failed to restart node after update: ' + err);
+                    });
+                });
+            }).catch(err => {
+                onErrorLine('Aborting update, failed to shutdown node: ' + err);
             });
+
         }
         else {
             OnLogLine('Already up to date!');
@@ -171,11 +186,16 @@ async function getLatestCommitHash() {
 }
 
 
-setInterval(function() {
-    OnLogLine('Checking for latest commit sha...');
+function checkForUpdate() {
+    OnLogLine('Checking for update...');
     getLatestCommitHash().then(latestSha => {
         updateIfNeeded(latestSha);
     }).catch(err => {
         onErrorLine('Failed to get latest sha from Github: ' + err);
     });
-}, 1000*60*10);
+}
+
+
+checkForUpdate();
+
+setInterval(checkForUpdate, 1000*60*10);
