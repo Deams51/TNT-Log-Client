@@ -114,20 +114,18 @@ function updateIfNeeded(lastSha) {
         if(localSha !== lastSha) {
             OnLogLine('Updating node...');
 
-            shutdown().then( () => {
-                const git = spawn('git', ['pull'], {cwd: process.env.HOME + '/chainpoint-node'});
-                git.stdout.on('data', onLogData);
-                git.stderr.on('data', onErrorData);
+            const make = spawn('make', ['upgrade'], {cwd: nodePath});
+            make.stdout.on('data', onLogData);
+            make.stderr.on('data', onErrorData);
 
-                git.on('close', (code) => {
-                    OnLogLine('Finished updating node (code: ' + code + '), restarting...');
-                    socket.emit('update-finished', code);
-                    start().catch(err => {
-                        onErrorLine('Failed to restart node after update: ' + err);
-                    });
-                });
-            }).catch(err => {
-                onErrorLine('Aborting update, failed to shutdown node: ' + err);
+            make.on('close', (code) => {
+                console.log('Exited upgrade with code ' + code);
+                socket.emit('upgrade-finished', code);
+                OnLogLine('Update finished with code: ' + code);
+
+                if (code === 0) {
+                    execLogs();
+                }
             });
 
         }
