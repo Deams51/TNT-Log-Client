@@ -167,7 +167,7 @@ const repoUrl = 'https://api.github.com/repos/chainpoint/chainpoint-node/commits
 async function getLatestCommitHash() {
   try {
     let options = {
-      url: repoUrl,
+      url: repoUrl + '?client_id=' + config.clientId + '&client_secret=' + config.clientSecret,
       headers: {
         'User-Agent': 'TNT-logs'
       }
@@ -197,4 +197,4 @@ function checkForUpdate() {
 
 checkForUpdate();
 
-setInterval(checkForUpdate, 1000*60*10);
+setInterval(checkForUpdate, 1000*5);
