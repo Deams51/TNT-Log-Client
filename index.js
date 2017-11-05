@@ -39,39 +39,39 @@ function execLogs() {
 
     logs.on('close', (code) => {
         const level = (code !== 0 ? 'error' : 'info');
-        socket.emit('log', {level: level, data: ['Exited with code: ' + code]});
-        console.log(`Logs process exited with code ${code}`);
-    });
+    socket.emit('log', {level: level, data: ['Exited with code: ' + code]});
+    console.log(`Logs process exited with code ${code}`);
+});
 }
 
 function getLastCommitSha() {
     return new Promise((resolve, reject) => {
         const git = spawn('git', ['rev-parse', 'HEAD'], {cwd: nodePath});
 
-        var res = '';
-        var err = '';
+    var res = '';
+    var err = '';
 
-        git.stdout.on('data', (data) => {
-            res += data;
-        });
+    git.stdout.on('data', (data) => {
+        res += data;
+});
 
-        git.stderr.on('data', (data) => {
-            err += data;
-        });
+    git.stderr.on('data', (data) => {
+        err += data;
+});
 
-        git.on('close', (code) => {
-            if(code === 0) {
-                resolve(res.toString());
-            }
-            else reject(err);
-        });
-    });
+    git.on('close', (code) => {
+        if(code === 0) {
+        resolve(res.toString());
+    }
+else reject(err);
+});
+});
 }
 
 function sendLastCommitSha() {
     getLastCommitSha
         .then(sha => socket.emit('sha', sha))
-        .catch(err => onErrorData(err))
+.catch(err => onErrorData(err))
 }
 
 function shutdown() {
@@ -79,32 +79,32 @@ function shutdown() {
 
     return new Promise((resolve, reject) => {
         make.stdout.on('data', onLogData);
-        make.stderr.on('data', onErrorData);
+    make.stderr.on('data', onErrorData);
 
-        make.on('close', (code) => {
-            console.log('Exited shutdown with code ' + code);
-            socket.emit('shutdown-finished', code);
-            resolve();
-        });
-    });
+    make.on('close', (code) => {
+        console.log('Exited shutdown with code ' + code);
+    socket.emit('shutdown-finished', code);
+    resolve();
+});
+});
 }
 
 function start() {
     return new Promise((resolve, reject) => {
         const make = spawn('make', ['up'], {cwd: nodePath});
-        make.stdout.on('data', onLogData);
-        make.stderr.on('data', onErrorData);
+    make.stdout.on('data', onLogData);
+    make.stderr.on('data', onErrorData);
 
-        make.on('close', (code) => {
-            console.log('Exited start with code ' + code);
-            socket.emit('start-finished', code);
+    make.on('close', (code) => {
+        console.log('Exited start with code ' + code);
+    socket.emit('start-finished', code);
 
-            if (code === 0) {
-                execLogs();
-            }
-            resolve();
-        });
-    });
+    if (code === 0) {
+        execLogs();
+    }
+    resolve();
+});
+});
 }
 
 function updateIfNeeded(lastSha) {
@@ -112,28 +112,25 @@ function updateIfNeeded(lastSha) {
 
     getLastCommitSha().then(localSha => {
         if(localSha.trim() !== lastSha.trim()) {
-            OnLogLine('Updating node...');
-            OnLogLine('Local sha: ' + localSha + '    live sha: ' + lastSha);
+        OnLogLine('Updating node...');
+        OnLogLine('Local sha: ' + localSha + '    live sha: ' + lastSha);
 
-            const make = spawn('make', ['upgrade'], {cwd: nodePath});
-            make.stdout.on('data', onLogData);
-            make.stderr.on('data', onErrorData);
+        const make = spawn('make', ['upgrade'], {cwd: nodePath});
+        make.stdout.on('data', onLogData);
+        make.stderr.on('data', onErrorData);
 
-            make.on('close', (code) => {
-                console.log('Exited upgrade with code ' + code);
-                socket.emit('upgrade-finished', code);
-                OnLogLine('Update finished with code: ' + code);
+        make.on('close', (code) => {
+            console.log('Exited upgrade with code ' + code);
+        socket.emit('upgrade-finished', code);
+        OnLogLine('Update finished with code: ' + code);
 
-                if (code === 0) {
-                    execLogs();
-                }
-            });
-
-        }
-        else {
-            OnLogLine('Already up to date!');
+        if (code === 0) {
+            execLogs();
         }
     });
+
+    }
+});
 }
 
 function restart(){
@@ -165,33 +162,32 @@ function cleanData(buffer) {
 let request = require('request-promise');
 const repoUrl = 'https://api.github.com/repos/chainpoint/chainpoint-node/commits/master';
 async function getLatestCommitHash() {
-  try {
-    let options = {
-      url: repoUrl + '?client_id=' + config.clientId + '&client_secret=' + config.clientSecret,
-      headers: {
-        'User-Agent': 'TNT-logs'
-      }
-    };
+    try {
+        let options = {
+            url: repoUrl + '?client_id=' + config.clientId + '&client_secret=' + config.clientSecret,
+            headers: {
+                'User-Agent': 'TNT-logs'
+            }
+        };
 
-    let res = await request(options);
-    let commit = JSON.parse(res);
-    let lastCommitSha = commit.sha;
-    console.log('SHA: ' + lastCommitSha);
-    return lastCommitSha;
-  }
-  catch(err) {
-    console.error(err);
-  }
+        let res = await request(options);
+        let commit = JSON.parse(res);
+        let lastCommitSha = commit.sha;
+        console.log('SHA: ' + lastCommitSha);
+        return lastCommitSha;
+    }
+    catch(err) {
+        console.error(err);
+    }
 }
 
 
 function checkForUpdate() {
-    OnLogLine('Checking for update...');
     getLatestCommitHash().then(latestSha => {
         updateIfNeeded(latestSha);
-    }).catch(err => {
+}).catch(err => {
         onErrorLine('Failed to get latest sha from Github: ' + err);
-    });
+});
 }
 
 
